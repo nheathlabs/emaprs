@@ -118,8 +118,10 @@ the time between packets.
 
 CI (`.github/workflows/ci.yml`) runs `tools/check.sh` on every push to
 `master` and every pull request, on Python 3.11 (the oldest supported) and
-3.14, and builds the packages. There is no pre-commit hook, so run the
-checks yourself first:
+3.14, and builds the packages. `master` is protected: changes reach it
+only through a pull request, which can merge once those CI jobs pass and
+its branch is up to date with `master`. There is no pre-commit hook, so
+run the checks yourself first:
 
 ```sh
 tools/check.sh              # everything

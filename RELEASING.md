@@ -12,8 +12,12 @@ Maintainer notes for cutting a release.
 3. Regenerate the screenshots (`tools/screenshots.py`) so the page header
    and Display Options show the new version, and commit them with the
    bump.
-4. Push to `master` and wait for CI to pass on every Python version.
-5. Tag that commit and push the tag:
+4. Push the change on a branch, open a pull request, and merge it once
+   CI passes on every Python version (`master` only takes changes
+   through pull requests).
+5. Tag the merged commit on `master`, not the branch commit (a squash or
+   rebase merge makes a new one), and push the tag:
+   `git switch master && git pull`, then
    `git tag -a vx.y.z -m "emaprs x.y.z" && git push origin vx.y.z`.
 6. The Release workflow (`.github/workflows/release.yml`) checks that the
    tag matches `__version__` and that `CHANGELOG.md` has an entry for it,
