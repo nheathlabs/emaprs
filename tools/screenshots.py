@@ -192,7 +192,9 @@ def shrink(path: Path) -> None:
         return
     subprocess.run(
         [magick, str(path), "-dither", "FloydSteinberg", "-colors", "256",
-         "-define", "png:compression-level=9", f"PNG8:{path}"],
+         "-define", "png:compression-level=9",
+         # no tIME / date:create / date:modify chunks: the PNGs carry no timestamps
+         "-define", "png:exclude-chunks=date,time", f"PNG8:{path}"],
         check=True,
     )
 
