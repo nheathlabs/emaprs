@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Nicholas Heath -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>emaprs</title>
+  <link rel="stylesheet" href="/static/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="title">emaprs <span class="version">v{{VERSION}}</span></span>
+    <span id="mycall" class="mycall"></span>
+    <span class="spacer"></span>
+    <span id="st-server" class="pill bad" title="Connection from this page to the emaprs server">Server</span>
+    <span id="st-kiss" class="pill bad" title="KISS TNC connection">KISS</span>
+    <span id="st-gps" class="pill bad" title="gpsd connection and fix">GPS</span>
+  </header>
+  <main>
+    <div id="map"></div>
+    <aside>
+      <nav class="tabs" role="tablist">
+        <button id="tab-raw" class="tab active" role="tab" data-panel="panel-raw">Raw <span class="badge" id="badge-raw"></span></button>
+        <button id="tab-msg" class="tab" role="tab" data-panel="panel-msg">Messages <span class="badge" id="badge-msg"></span></button>
+        <button id="tab-opts" class="tab" role="tab" data-panel="panel-opts">Display Options</button>
+      </nav>
+      <ul id="panel-raw" class="panel active" role="tabpanel"></ul>
+      <ul id="panel-msg" class="panel" role="tabpanel"></ul>
+      <div id="panel-opts" class="panel options" role="tabpanel">
+        <label class="option">
+          <span>Station Trails</span>
+          <input type="checkbox" id="opt-trails" class="switch" role="switch" checked>
+        </label>
+        <label class="option">
+          <span>Imperial Units <small class="hint">mph, ft</small></span>
+          <input type="checkbox" id="opt-imperial" class="switch" role="switch" checked>
+        </label>
+        <label class="option">
+          <span>Follow Me <small class="hint">pan with my position</small></span>
+          <input type="checkbox" id="opt-follow" class="switch" role="switch">
+        </label>
+        <div class="about">emaprs v{{VERSION}} &middot; {{GIT_HASH}}</div>
+      </div>
+    </aside>
+  </main>
+  <script src="/static/leaflet/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

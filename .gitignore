@@ -1,0 +1,40 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python build / cache artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Written into build output by setup.py (commit hash of the build)
+emaprs/_build_info.py
+
+# Test / coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local config (copy of config.example.toml with your callsign/position)
+emaprs.toml
+
+# Fake-server logs from tools/run_fake.sh
+.run/
+*.log
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Code-quality tool caches (tools/check.sh)
+.ruff_cache/
+.mypy_cache/

@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Nicholas Heath
+#
+# Reference systemd unit for emaprs.
+#
+# `pip install` does not install this file. Install it yourself:
+#   - by hand:              /etc/systemd/system/emaprs.service
+#   - from a package/recipe: /usr/lib/systemd/system/emaprs.service
+# then:
+#   systemctl daemon-reload
+#   systemctl enable --now emaprs
+#   journalctl -u emaprs -f
+#
+# It reads its config from /etc/emaprs/emaprs.toml (start from
+# config.example.toml in the emaprs source).
+#
+# To customise, don't edit this file in place: run `systemctl edit emaprs`
+# and put your changes in the drop-in it opens. Drop-ins survive upgrades
+# of this file. See "Running as a service" in the emaprs README.
+
+# --- Why there are no After=/Wants=/Requires= lines ---------------------
+#
+# Deliberately, emaprs depends on nothing at startup:
+#   - The TNC can be any KISS-over-TCP source (Direwolf, a hardware TNC
+#     behind a TCP bridge, a remote TNC, ...), so this unit can't name it.
+#   - gpsd is optional: a station can use a fixed [station] position and
+#     set [gpsd] enabled = false.
+#   - emaprs retries the TNC and gpsd forever and shows their status in
+#     the page header, so it doesn't matter which starts first.
+#   - No network-online.target: a station may only ever have a local
+#     network (or none, viewing the page on the same machine), and would
+#     wait for "online" in vain. Binding 0.0.0.0, ::, 127.0.0.1 or ::1
+#     in [http] bind needs no interface to be up.
+#
+# If your TNC or gpsd runs on this machine and you want emaprs to start
+# after it, add ordering in a drop-in (`systemctl edit emaprs`):
+#
+#   [Unit]
+#   After=direwolf.service gpsd.service
+#
+# After= only orders startup; it's harmless if a named unit doesn't exist
+# or isn't enabled. Don't use Requires= or BindsTo=: emaprs would then be
+# stopped whenever the TNC or gpsd restarts, for no benefit, since it
+# reconnects on its own.
+
+[Unit]
+Description=emaprs - Embeddable APRS
+
+[Service]
+# Assumes a system-wide install (package, recipe, or `pip install` as root).
+# For a virtualenv install, override in a drop-in; the empty ExecStart=
+# line is required to clear this one first:
+#   [Service]
+#   ExecStart=
+#   ExecStart=/opt/emaprs/.venv/bin/emaprs --config /etc/emaprs/emaprs.toml
+ExecStart=/usr/bin/emaprs --config /etc/emaprs/emaprs.toml
+
+# Run as a throwaway system user that systemd allocates; no account to
+# create. StateDirectory makes /var/lib/emaprs, owned by that user and kept
+# across restarts and reboots: this is where the packet database lives.
+#
+# On an image with a read-only or RAM-backed /var, /var/lib/emaprs must be
+# made writable and persistent (e.g. a data partition mounted there), or
+# the database is refused (read-only) or lost at every reboot (RAM).
+DynamicUser=yes
+StateDirectory=emaprs
+
+# %S is /var/lib for system services. With this, emaprs's default database
+# path ($XDG_DATA_HOME/emaprs/emaprs.sqlite3) becomes
+# /var/lib/emaprs/emaprs.sqlite3, so the config can leave out
+# [storage] database entirely.
+#
+# A "~/..." [storage] database path does NOT work here: a DynamicUser has
+# no usable home directory. Leave the key out, or set it to
+# /var/lib/emaprs/emaprs.sqlite3.
+Environment=XDG_DATA_HOME=%S
+
+# Restart after a crash, or when startup fails because the [http] bind
+# address isn't up yet (a specific interface address on a slow network).
+# A normal stop (SIGTERM) exits cleanly and is not a failure.
+# Exit status 2 is a config error: retrying won't help, so don't loop; fix
+# the config and `systemctl restart emaprs`.
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=2
+
+# Hardening. DynamicUser already implies most of this; it's spelled out so
+# it's visible. None of it affects outbound TCP to the TNC or gpsd, or the
+# web server's listening socket.
+#   ProtectSystem=strict  whole filesystem read-only except the
+#                         StateDirectory (/var/lib/emaprs)
+#   ProtectHome=yes       /home, /root and /run/user are invisible
+#   PrivateTmp=yes        private /tmp and /var/tmp
+#   NoNewPrivileges=yes   can't gain privileges via setuid binaries
+# If you set [storage] database outside /var/lib/emaprs, allow writing it in
+# a drop-in, e.g.  ReadWritePaths=/data/emaprs
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

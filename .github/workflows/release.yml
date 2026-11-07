@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Nicholas Heath
+#
+# Pushing a vX.Y.Z tag runs the checks, builds the sdist and wheel, and
+# creates a draft GitHub release with them, SHA256SUMS, and the
+# CHANGELOG.md entry as its text, for review and publishing by hand.
+# A manual run (workflow_dispatch) builds the files without a release.
+# See RELEASING.md.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Version, tag and changelog agree
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read the version
+        id: version
+        run: |
+          version=$(sed -n 's/^__version__ = "\([^"]*\)"$/\1/p' emaprs/__init__.py)
+          test -n "$version"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match emaprs/__init__.py version $version"
+            exit 1
+          fi
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md >notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no entry for $VERSION"
+            exit 1
+          fi
+          cat notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: notes
+          path: notes.md
+
+  build:
+    name: Checks, sdist and wheel
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Set up .venv with the dev tools
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -q --upgrade pip
+          .venv/bin/python -m pip install -q -e '.[dev]'
+      - name: tools/check.sh
+        run: tools/check.sh
+      - name: Build
+        run: .venv/bin/python -m build
+      - name: Check the wheel has the page and its bundled files
+        run: python tools/check_wheel.py dist/*.whl
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Draft GitHub release
+    if: github.ref_type == 'tag'
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum emaprs-* >SHA256SUMS
+          cat SHA256SUMS
+      - name: Create the draft release
+        run: |
+          cd dist
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft \
+            --verify-tag --title "emaprs $VERSION" --notes-file notes.md \
+            emaprs-* SHA256SUMS

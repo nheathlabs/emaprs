@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Nicholas Heath
+#
+# The pre-push checks from CONTRIBUTING.md (tools/check.sh), on every push
+# to master and every pull request, on the oldest Python emaprs supports
+# (requires-python in pyproject.toml) and the newest. Also builds the
+# packages and checks the page's static files are in the wheel.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Tests and checks (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Set up .venv with the dev tools
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -q --upgrade pip
+          .venv/bin/python -m pip install -q -e '.[dev]'
+      - name: tools/check.sh
+        run: tools/check.sh
+
+  package:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Build
+        run: |
+          python -m pip install -q build
+          python -m build
+      - name: Check the wheel has the page and its bundled files
+        run: python tools/check_wheel.py dist/*.whl
+      - uses: actions/upload-artifact@v7
+        with:
+          name: emaprs-dist
+          path: dist/

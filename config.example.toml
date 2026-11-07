@@ -1,0 +1,93 @@
+# emaprs configuration.
+# Copy to ~/.config/emaprs/emaprs.toml (read when --config is not given),
+# or pass a path with --config. Any key left out uses the default shown here.
+
+[station]
+# Your callsign, e.g. "N0CALL-9". Optional. When set, packets from you are
+# highlighted and APRS messages addressed to you (with or without SSID) are
+# flagged in the Messages tab.
+callsign = ""
+
+# Fixed position for this station as [lat, lon] in decimal degrees
+# (north and east positive), e.g. [45.52, -122.68]. Optional; leave empty
+# to rely on gpsd only.
+#   - With [gpsd] enabled = false: this is always your position on the map.
+#   - With gpsd enabled: this is shown until gpsd reports its first fix,
+#     then your position follows gpsd. If gpsd later loses its fix, the
+#     last GPS position stays on the map (not this one).
+position = []
+
+[kiss]
+# KISS-over-TCP TNC, e.g. Direwolf's KISS port.
+host = "127.0.0.1"
+port = 8001
+# Longest wait between reconnect attempts, in seconds.
+reconnect_max_seconds = 30
+
+[gpsd]
+# Set to false for a station without GPS; use [station] position instead.
+enabled = true
+host = "127.0.0.1"
+port = 2947
+
+[http]
+# Addresses to listen on: always a list, one listener per address, all on
+# the same port. The page has no login: anyone who can reach it can see it.
+#
+#   bind = ["0.0.0.0", "::"]              # every IPv4 + every IPv6 address (default):
+#                                         #   other machines on the network can view the map
+#   bind = ["0.0.0.0"]                    # every IPv4 address only (no IPv6)
+#   bind = ["127.0.0.1", "192.168.1.20"]  # this machine + one LAN address
+#   bind = ["127.0.0.1", "::1"]           # this machine only, over IPv4 and IPv6
+#   bind = ["127.0.0.1"]                  # this machine only, IPv4
+#   bind = ["192.168.1.20", "fd00::20"]   # one IPv4 and one IPv6 address
+#
+# IP addresses only, not host names. "0.0.0.0" already covers every IPv4
+# address and "::" every IPv6 one, so neither can be listed with a specific
+# address of its own family. A specific address must be up when emaprs
+# starts, or startup fails. If IPv6 is disabled on this machine, remove the
+# IPv6 addresses ("::", "::1", ...); emaprs says so at startup.
+bind = ["0.0.0.0", "::"]
+port = 8080
+
+[buffers]
+raw_max = 1000                 # packets kept for the Raw tab
+# Each station (callsign-SSID or object name) keeps its own packet history;
+# its positions are drawn as a trail. Packets older than this are dropped
+# from the history and the Messages tab, and a station with none left is
+# removed. Must be at least 1.
+# Each station's history and the Messages tab hold at most twice this many
+# packets (5760 for 2 days); the oldest are dropped first.
+station_expire_minutes = 2880  # 2 days
+
+[map]
+center = [0.0, 0.0]            # [lat, lon] used until a GPS fix arrives
+zoom = 10
+tile_url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+
+[storage]
+# SQLite file that mirrors every station's packet history, so a restart
+# picks up where it left off (packets past expiry are dropped on load).
+# The directory is created if needed.
+#
+# Set to "" to disable it: nothing is written to disk and history starts
+# empty after every restart. (Removing the line is NOT the same: a missing
+# key means the default path below.)
+#
+# Flash wear: the database is written on EVERY received packet (one SQLite
+# commit each), plus a delete about once a minute while packets expire. On
+# a busy channel that adds up to a lot of small writes per day, which wears
+# out SD cards, cheap eMMC and USB sticks quickly. On such media, set
+# database = "" or point it at durable storage (SSD, industrial eMMC/SD).
+#
+# If this key is left out: ~/.local/share/emaprs/emaprs.sqlite3, or under
+# $XDG_DATA_HOME if that is set.
+database = "~/.local/share/emaprs/emaprs.sqlite3"
+# For a system service, e.g. on an embedded image (the service user needs
+# write access to the directory):
+# database = "/var/lib/emaprs/emaprs.sqlite3"
+# Under contrib/systemd/emaprs.service, remove the "~/..." line above or
+# use the /var/lib path: the service user has no home directory.
+
+[logging]
+level = "INFO"                 # DEBUG, INFO, WARNING, ERROR, CRITICAL

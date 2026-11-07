@@ -1,0 +1,151 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emaprs"
+dynamic = ["version"]
+description = "Embeddable APRS: a frontend for working with APRS"
+readme = "README.md"
+keywords = ["aprs", "ham radio", "amateur radio", "kiss", "tnc", "direwolf", "gpsd", "ax25"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: AsyncIO",
+    "Framework :: aiohttp",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: JavaScript",
+    "Topic :: Communications :: Ham Radio",
+]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Nicholas Heath" }]
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9",
+    "aprslib>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "build>=1",
+    # Code-quality tools run by tools/check.sh. Upper bounds: new releases
+    # add rules, so upgrade on purpose rather than have checks change.
+    "pytest-cov>=7,<8",
+    "ruff>=0.17,<0.18",
+    "mypy>=2.4,<3",
+    "radon>=6,<7",
+    "vulture>=2.16,<3",
+    "bandit>=1.9,<2",
+]
+
+[project.urls]
+# The repository isn't published yet; these are where it will live.
+Homepage = "https://github.com/nheathlabs/emaprs"
+Repository = "https://github.com/nheathlabs/emaprs"
+Issues = "https://github.com/nheathlabs/emaprs/issues"
+
+[project.scripts]
+emaprs = "emaprs.__main__:main"
+
+[tool.setuptools]
+# The static folders hold no Python, but setuptools treats every folder in
+# a package as a package of its own, so list them; their files are the
+# package-data below.
+packages = [
+    "emaprs",
+    "emaprs.static",
+    "emaprs.static.symbols",
+    "emaprs.static.leaflet",
+    "emaprs.static.leaflet.images",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "emaprs.__version__" }
+
+[tool.setuptools.package-data]
+"emaprs.static" = ["*"]
+"emaprs.static.symbols" = ["*"]
+"emaprs.static.leaflet" = ["*"]
+"emaprs.static.leaflet.images" = ["*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore:datetime.datetime.utcnow:DeprecationWarning:aprslib"]
+
+# ---- code quality: tools/check.sh runs all of these -----------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes: unused names, undefined names
+    "I",        # import order
+    "B",        # bugbear: likely bugs
+    "UP",       # pyupgrade: newer syntax for Python 3.11+
+    "SIM",      # simplifications
+    "ASYNC",    # asyncio pitfalls
+    "C4",       # comprehensions
+    "PIE",      # misc. lint
+    "RUF",      # ruff's own rules
+    "EXE",      # shebang / executable bit
+    "C90",      # mccabe complexity (limit below)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Re-execs itself under .venv before importing aiohttp, so imports come late;
+# a one-shot dev script, so blocking calls inside its async code are fine.
+"tools/screenshots.py" = ["E402", "ASYNC220", "ASYNC240"]
+
+[tool.ruff.lint.mccabe]
+# Fails a function above this; radon (in tools/check.sh) reports the rest.
+max-complexity = 15
+
+[tool.mypy]
+python_version = "3.11"
+files = ["emaprs"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# aprslib ships no type hints; _build_info.py only exists in built packages.
+module = ["aprslib", "aprslib.*", "emaprs._build_info"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["emaprs"]
+# Also measure emaprs started as a subprocess (tests/test_shutdown.py).
+patch = ["subprocess"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+
+[tool.vulture]
+# tests and tools included: they are the only callers of some helpers.
+paths = ["emaprs", "tests", "tools"]
+min_confidence = 60
+# pytest calls fixtures by name (or by itself: autouse), which vulture can't see.
+ignore_decorators = ["@pytest.fixture"]
+
+[tool.bandit]
+# B104 (binding to all interfaces): [http] bind defaults to every address
+# on purpose so the map is viewable on the LAN; it's documented and set by
+# the user's config.
+skips = ["B104"]
