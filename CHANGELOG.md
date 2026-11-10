@@ -9,6 +9,23 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `config.example.toml` now lists every setting commented out, with its
+  default. A config copied from it keeps following the defaults, including
+  ones that change in later releases; uncomment only what you change.
+  A config copied from the 0.1.0 example still works, but it sets every
+  key, so it won't pick up new defaults.
+
+### Fixed
+
+- A config copied from the example no longer sets `[storage] database` to
+  `"~/.local/share/..."`. That path ignored `$XDG_DATA_HOME` and failed under
+  the shipped systemd unit, whose service user has no home directory. If
+  your config came from the 0.1.0 example, remove or comment out that line;
+  the default then resolves correctly (`/var/lib/emaprs/emaprs.sqlite3`
+  under the systemd unit).
+
 ## [0.1.0] - 2026-11-07
 
 The first release. Earlier version numbers (0.0.x) were used during

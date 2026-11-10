@@ -241,8 +241,9 @@ cleanly on cancellation (`tests/test_shutdown.py`).
 
 ### Configuration
 
-Every key is documented, with its default, in `config.example.toml`, and
-validated in `config.py`. Unknown keys and bad values stop startup with a
+Every key is documented in `config.example.toml`, commented out with its
+default, and validated in `config.py`. `tests/test_config.py` checks that the
+example lists every key with exactly its default. Unknown keys and bad values stop startup with a
 clear error (exit status 2), never a silent fallback. A new setting gets
 all three: the validation, the documented example, and a test in
 `tests/test_config.py`. Mention it in the README if users need to know

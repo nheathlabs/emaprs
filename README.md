@@ -110,8 +110,10 @@ vim ~/.config/emaprs/emaprs.toml
 ```
 
 Without `--config`, emaprs reads `~/.config/emaprs/emaprs.toml`, or runs on
-defaults if that file doesn't exist. Every key is documented in
-`config.example.toml`. Unknown keys and bad values stop startup with an error.
+defaults if that file doesn't exist. Every key is listed in
+`config.example.toml`, commented out with its default and documented: uncomment
+only what you want to change. Unknown keys and bad values stop startup with an
+error.
 
 ### Your position: gpsd or a fixed location
 
@@ -151,12 +153,13 @@ It does not jump back to the fixed position.
 
 ```toml
 [storage]
-database = "~/.local/share/emaprs/emaprs.sqlite3"   # the default
-# database = "/var/lib/emaprs/emaprs.sqlite3"       # e.g. a system service
+database = "/data/emaprs/emaprs.sqlite3"   # only if you want a non-default path
 ```
 
-If the key is left out, the default is `~/.local/share/emaprs/emaprs.sqlite3`
-(under `$XDG_DATA_HOME` if set). The directory is created if needed. The
+If the key is left out (as in the example config), the default is
+`$XDG_DATA_HOME/emaprs/emaprs.sqlite3`, which is
+`~/.local/share/emaprs/emaprs.sqlite3` when `$XDG_DATA_HOME` is not set.
+The directory is created if needed. The
 file always matches what's in memory: a packet is written when it arrives
 and deleted when it expires, is pushed out by the per-station cap, or its
 object is killed. If the file is unreadable (corrupt), emaprs renames it to
@@ -272,10 +275,11 @@ should install the unit to `/usr/lib/systemd/system/emaprs.service` instead.
 
 The unit runs emaprs as a throwaway system user (`DynamicUser`) with a
 persistent `/var/lib/emaprs/`, and points emaprs's default database path
-there. In `/etc/emaprs/emaprs.toml`, either leave `[storage] database` out
-or set it to `/var/lib/emaprs/emaprs.sqlite3`. The example config's
-`"~/.local/share/..."` line must be removed or changed: the service user has
-no home directory, so emaprs would fail to open the database.
+there. In `/etc/emaprs/emaprs.toml`, leave `[storage] database` commented
+out (as in the example config) and the database is
+`/var/lib/emaprs/emaprs.sqlite3`. Don't set it to a `"~/..."` path: the
+service user has no home directory, so emaprs would fail to open the
+database.
 
 ### Customising
 
