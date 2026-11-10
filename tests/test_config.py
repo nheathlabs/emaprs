@@ -15,12 +15,34 @@ def test_defaults():
     assert cfg.station.callsign == ""
 
 
-def test_example_file_loads():
-    from pathlib import Path
+EXAMPLE = Path(__file__).parent.parent / "config.example.toml"
 
-    cfg, path = config.load(Path(__file__).parent.parent / "config.example.toml")
-    assert cfg.buffers.raw_max == 1000
-    assert path is not None
+
+def test_example_file_loads_as_defaults():
+    # Every key is commented out, so the example as shipped is all defaults.
+    cfg, path = config.load(EXAMPLE)
+    assert path == EXAMPLE
+    assert cfg == config.from_dict({})
+
+
+def test_example_lists_every_key_with_its_default(monkeypatch):
+    # Uncomment every "# key = value" line (the commented-out settings, not
+    # the indented examples or prose) and check the result names every key
+    # with exactly its default value.
+    import re
+    import tomllib
+    from dataclasses import fields
+
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    text = EXAMPLE.read_text()
+    uncommented = re.sub(r"(?m)^# (?=[a-z_]+ = )", "", text)
+    data = tomllib.loads(uncommented)
+
+    defaults = config.from_dict({})
+    for section in (f.name for f in fields(config.Config) if f.name != "warnings"):
+        keys = {f.name for f in fields(getattr(defaults, section))}
+        assert set(data.get(section, {})) == keys, f"[{section}] keys in example"
+    assert config.from_dict(data) == defaults
 
 
 def test_overrides_and_normalizing():
