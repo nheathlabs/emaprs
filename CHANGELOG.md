@@ -9,6 +9,13 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Display Options: **Only Selected Station** switch under Station Trails.
+  When on, only the trail of the station whose popup is open is drawn,
+  instead of every station's trail. It is on by default, so after
+  upgrading you see one trail at a time; turn it off for the old view.
+
 ### Changed
 
 - `config.example.toml` now lists every setting commented out, with its

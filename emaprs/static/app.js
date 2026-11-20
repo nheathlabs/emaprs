@@ -21,6 +21,8 @@
   const unread = { raw: 0, msg: 0, msgToMe: 0 };
   let imperial = true;          // Display Options: mph / ft instead of km/h / m
   let followMe = false;         // Display Options: keep the map panned to my position
+  let trailsSelectedOnly = true; // Display Options: trail only for the station whose popup is open
+  let selectedStation = null;   // name of the station whose popup is open
 
   // ---------- helpers ----------
   function h(tag, cls, text) {
@@ -210,6 +212,26 @@
 
   const TRAIL_STYLE = { color: "#d9480f", weight: 2, opacity: 0.7, interactive: false };
 
+  // Put a station's trail in trailLayer, or take it out, per the "Only
+  // Selected Station" option. (trailLayer itself is on the map only while
+  // Station Trails is on.)
+  function syncTrail(name) {
+    const s = stations.get(name);
+    if (!s || !s.trail) return;
+    const shown = !trailsSelectedOnly || name === selectedStation;
+    if (shown && !trailLayer.hasLayer(s.trail)) trailLayer.addLayer(s.trail);
+    else if (!shown && trailLayer.hasLayer(s.trail)) trailLayer.removeLayer(s.trail);
+  }
+
+  function syncAllTrails() {
+    for (const name of stations.keys()) syncTrail(name);
+  }
+
+  function selectStation(name) {
+    selectedStation = name;
+    syncAllTrails();
+  }
+
   // Redraw a station's marker and trail from its packet history.
   function renderStation(name) {
     const s = stations.get(name);
@@ -236,12 +258,15 @@
         // object or item name is whatever another station sent.
         .bindTooltip(h("span", null, name), { permanent: true, direction: "right", className: "callsign" })
         .bindPopup(() => popupContent(name), { maxWidth: 360 })
+        .on("popupopen", () => selectStation(name))
         .on("popupclose", () => {
           // Reopen fresh: packet list collapsed, and content rebuilt rather
           // than the snapshot a live update left behind.
           const cur = stations.get(name);
           if (cur) cur.histOpen = false;
           cur?.marker?.setPopupContent(() => popupContent(name));
+          // Opening another station's popup closes this one first.
+          if (selectedStation === name) selectStation(null);
         })
         .addTo(map);
       s.symKey = symbolKey(p);
@@ -256,7 +281,10 @@
     }
     if (pts.length >= 2) {
       if (s.trail) s.trail.setLatLngs(pts);
-      else s.trail = L.polyline(pts, TRAIL_STYLE).addTo(trailLayer);
+      else {
+        s.trail = L.polyline(pts, TRAIL_STYLE);
+        syncTrail(name);
+      }
     } else if (s.trail) {
       trailLayer.removeLayer(s.trail);
       s.trail = null;
@@ -306,6 +334,7 @@
       if (s.marker) s.marker.remove();
       if (s.trail) trailLayer.removeLayer(s.trail);
       stations.delete(name);
+      if (selectedStation === name) selectedStation = null;
     }
   }
 
@@ -443,12 +472,21 @@
 
   function setupOptions() {
     const trails = el("opt-trails");
+    const selOnly = el("opt-trails-selected");
     trails.checked = loadOption("trails", true);
+    selOnly.disabled = !trails.checked;
     trails.addEventListener("change", () => {
       saveOption("trails", trails.checked);
+      selOnly.disabled = !trails.checked;
       if (!map) return;
       if (trails.checked) trailLayer.addTo(map);
       else trailLayer.remove();
+    });
+    selOnly.checked = trailsSelectedOnly = loadOption("trailsSelected", true);
+    selOnly.addEventListener("change", () => {
+      trailsSelectedOnly = selOnly.checked;
+      saveOption("trailsSelected", trailsSelectedOnly);
+      if (map) syncAllTrails();
     });
     const units = el("opt-imperial");
     units.checked = imperial = loadOption("imperial", true);
