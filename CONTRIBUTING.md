@@ -128,10 +128,11 @@ tools/check.sh              # everything
 tools/check.sh ruff mypy    # only some
 ```
 
-It runs the tests with coverage, `ruff`, `mypy`, `vulture` and `bandit`,
-and prints a `radon` complexity report; it exits non-zero if any check
-fails (see "What the tooling covers" below). Every check must pass before
-a change is merged — there is no outstanding finding to work around.
+It runs the tests with coverage, `ruff`, `mypy`, `vulture`, `bandit` and
+`shellcheck`, and prints a `radon` complexity report; it exits non-zero
+if any check fails (see "What the tooling covers" below). Every check
+must pass before a change is merged — there is no outstanding finding to
+work around.
 `.venv/bin/pytest` on its own runs just the tests.
 
 After a change that alters the page, regenerate the screenshots (see
@@ -190,6 +191,13 @@ the reason next to it. Don't add an exception without one.
 - **`bandit`** fails on medium- or high-severity security patterns in
   `emaprs/`. The one skip (B104, binding to all addresses) is documented in
   `pyproject.toml`.
+- **Shell scripts** (every tracked `*.sh`) must start with `#!/bin/sh`,
+  pass `shellcheck --shell=sh`, and parse under `dash -n`. `shellcheck`
+  comes with the dev tools (`shellcheck-py`); `dash` is the system shell
+  on Debian and Ubuntu, and the `dash` step is skipped if it isn't
+  installed (CI always runs it). A `shellcheck` finding gets fixed, or
+  disabled on the line with a `# shellcheck disable=SCxxxx` comment
+  giving the reason.
 
 The dev tools have upper version bounds in `pyproject.toml` because new
 releases add rules. Raising one is a deliberate, separate change, with any
@@ -209,6 +217,16 @@ follow it with a one-line docstring saying what the module is for.
 Everything under `emaprs/static/symbols/` and `emaprs/static/leaflet/` is
 third-party and keeps its own licence; don't add GPL headers there,
 including to the `README.md` in each folder.
+
+### Shell scripts are POSIX sh
+
+Shell scripts run with `/bin/sh`, not bash: the shebang is `#!/bin/sh`
+and the script uses only what POSIX sh has. A station computer or an
+embedded image may have only a minimal shell (dash, BusyBox `ash`), so
+bash can't be assumed. In practice: no arrays (use a space-separated
+string, or `set --`), no `[[ ]]` (use `[ ]` or `case`), no `local`,
+`pipefail`, `<<<` or `$'...'` strings. Name them `*.sh` so the
+`shell` check finds them.
 
 ### Modules
 

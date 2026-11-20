@@ -9,10 +9,13 @@
 #   mypy     type check of emaprs/
 #   vulture  dead code
 #   bandit   security patterns, medium severity and up
+#   shell    shell scripts are POSIX sh: #!/bin/sh, shellcheck --shell=sh,
+#            and dash -n (skipped if dash isn't installed)
 #   radon    complexity / maintainability report: never fails
 #
-# Settings for every tool are in pyproject.toml. Install the tools with
-# pip install -e '.[dev]' (tools/install_build_deps.sh does this).
+# Settings for the Python tools are in pyproject.toml; shellcheck's are
+# its command line and the disable comments in each script. Install the
+# tools with pip install -e '.[dev]' (tools/install_build_deps.sh does this).
 #
 # Usage: tools/check.sh              all checks
 #        tools/check.sh ruff mypy    only some
@@ -27,9 +30,9 @@ set -u
 cd "$(dirname "$0")/.." || exit 2
 
 BIN=.venv/bin
-ALL="tests ruff mypy vulture bandit radon"
+ALL="tests ruff mypy vulture bandit shell radon"
 
-for tool in pytest ruff mypy vulture bandit radon; do
+for tool in pytest ruff mypy vulture bandit shellcheck radon; do
     if [ ! -x "$BIN/$tool" ]; then
         echo "check.sh: $BIN/$tool not found; run: .venv/bin/pip install -e '.[dev]'" >&2
         exit 2
@@ -118,6 +121,32 @@ check_bandit() {
     "$BIN/bandit" -q -c pyproject.toml -r emaprs --severity-level medium \
         && echo "no issues found"
     record bandit $?
+}
+
+check_shell() {
+    header "shell scripts (POSIX sh)"
+    shell_rc=0
+    # Every tracked *.sh file. File names have no spaces, so a plain list will do.
+    scripts=$(git ls-files '*.sh')
+    for f in $scripts; do
+        if [ "$(head -n 1 "$f")" != "#!/bin/sh" ]; then
+            echo "$f: first line must be #!/bin/sh"
+            shell_rc=1
+        fi
+    done
+    # --shell=sh checks against POSIX sh whatever the shebang says.
+    # shellcheck disable=SC2086  # one argument per script
+    "$BIN/shellcheck" --shell=sh $scripts || shell_rc=1
+    # dash is a strict POSIX shell; -n parses without running anything.
+    if command -v dash >/dev/null 2>&1; then
+        for f in $scripts; do
+            dash -n "$f" || shell_rc=1
+        done
+    else
+        echo "dash not found: skipped the dash -n syntax check (CI runs it)"
+    fi
+    [ "$shell_rc" -eq 0 ] && echo "no issues found"
+    record shell "$shell_rc"
 }
 
 check_radon() {
