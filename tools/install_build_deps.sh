@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Nicholas Heath
 # DEV ONLY: install what's needed to develop, test, package and screenshot
@@ -13,7 +13,7 @@
 #
 # Usage: tools/install_build_deps.sh
 
-set -euo pipefail
+set -eu
 
 cd "$(dirname "$0")/.."
 
@@ -24,24 +24,26 @@ have_chrome() {
 }
 
 SUDO=""
-if [[ $EUID -ne 0 ]]; then
+if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
 fi
 
 # --- system packages -------------------------------------------------------
 
-pkgs=(git python3 python3-venv python3-pip imagemagick)
+pkgs="git python3 python3-venv python3-pip imagemagick"
 
 if have apt-get; then
-    echo "installing system packages: ${pkgs[*]}"
+    echo "installing system packages: $pkgs"
     $SUDO apt-get update -q
-    $SUDO apt-get install -y -q "${pkgs[@]}"
+    # shellcheck disable=SC2086  # unquoted: one argument per package
+    $SUDO apt-get install -y -q $pkgs
 
     if have_chrome; then
         echo "Chromium/Chrome already installed"
     else
+        # shellcheck source=/dev/null
         . /etc/os-release
-        if [[ "${ID:-}" == "ubuntu" ]] && have snap; then
+        if [ "${ID:-}" = "ubuntu" ] && have snap; then
             # Ubuntu's apt chromium package is only a wrapper for the snap.
             echo "installing chromium (snap)"
             $SUDO snap install chromium
@@ -52,7 +54,7 @@ if have apt-get; then
     fi
 else
     echo "apt-get not found; install these with your package manager:" >&2
-    echo "  ${pkgs[*]} chromium" >&2
+    echo "  $pkgs chromium" >&2
     if ! have python3; then
         exit 1
     fi
@@ -60,7 +62,7 @@ fi
 
 # --- python venv -----------------------------------------------------------
 
-if [[ ! -x .venv/bin/python ]]; then
+if [ ! -x .venv/bin/python ]; then
     echo "creating virtual environment in .venv"
     python3 -m venv .venv
 fi
