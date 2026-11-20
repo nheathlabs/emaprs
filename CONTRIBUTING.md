@@ -228,6 +228,25 @@ string, or `set --`), no `[[ ]]` (use `[ ]` or `case`), no `local`,
 `pipefail`, `<<<` or `$'...'` strings. Name them `*.sh` so the
 `shell` check finds them.
 
+The same goes for the commands a script runs: use only options POSIX
+gives them, so the script works with BusyBox and BSD tools as well as
+GNU ones. No tool checks this, so avoid the ones known not to be
+portable:
+
+- `sed -i` (and GNU escapes such as `\n` in a replacement): write to a
+  new file, or use `awk`.
+- `head -1` / `tail -1`: use `head -n 1` / `tail -n 1`.
+- `echo -e` / `echo -n`, or `echo` of anything with a backslash or a
+  leading `-`: use `printf`.
+- `which`: use `command -v`.
+- `egrep` / `fgrep`: use `grep -E` / `grep -F`.
+- `readlink -f`, `realpath`, `mktemp`, `timeout`, `seq` and `stat` are
+  missing on some systems or behave differently between them: find
+  another way, or check the command exists first.
+
+Platform-specific tools such as `apt-get` in `install_build_deps.sh`
+are fine where the script says what it's for and checks for them.
+
 ### Modules
 
 One module = one responsibility, named for it:

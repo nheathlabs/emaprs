@@ -55,14 +55,15 @@ mkdir -p .run
 #   - [http] bind is forced to ["127.0.0.1"], so the test server is reachable
 #     only from this machine, not the network (bind's default is every
 #     address). The bind line is replaced, so keep it on one line.
-FAKE_DB="$PWD/.run/emaprs/emaprs.sqlite3"
-sed -E -e "s|^[[:space:]]*database[[:space:]]*=.*|database = \"$FAKE_DB\"|" \
-    -e '/^[[:space:]]*bind[[:space:]]*=/d' "$CONFIG" >.run/config.toml
-if grep -q '^[[:space:]]*\[http\]' .run/config.toml; then
-    sed -i -E 's|^([[:space:]]*\[http\].*)$|\1\nbind = ["127.0.0.1"]|' .run/config.toml
-else
-    printf '\n[http]\nbind = ["127.0.0.1"]\n' >>.run/config.toml
-fi
+# (awk rather than sed -i, which isn't portable; the path comes in through
+# the environment so no character in it is special.)
+FAKE_DB="$PWD/.run/emaprs/emaprs.sqlite3" awk '
+    /^[ \t]*database[ \t]*=/ { print "database = \"" ENVIRON["FAKE_DB"] "\""; next }
+    /^[ \t]*bind[ \t]*=/ { next }
+    { print }
+    /^[ \t]*\[http\]/ { print "bind = [\"127.0.0.1\"]"; http = 1 }
+    END { if (!http) printf "\n[http]\nbind = [\"127.0.0.1\"]\n" }
+' "$CONFIG" >.run/config.toml
 export XDG_DATA_HOME="$PWD/.run"
 pids=""
 

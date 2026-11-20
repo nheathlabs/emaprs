@@ -153,7 +153,7 @@ check_radon() {
     header "complexity (radon; report only, never fails)"
     echo "Functions graded C or worse (A-B simple, C moderate, D+ complex):"
     "$BIN/radon" cc -s -nc emaprs
-    "$BIN/radon" cc -s -a emaprs | tail -1
+    "$BIN/radon" cc -s -a emaprs | tail -n 1
     echo
     echo "Files below maintainability grade A:"
     mi=$("$BIN/radon" mi -s -nb emaprs)
