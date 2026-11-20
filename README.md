@@ -20,7 +20,8 @@ internet, and the browser fetches them itself when it can.
 - Your own position as a blue marker, from gpsd or a fixed location in the
   config (see [Your position](#your-position-gpsd-or-a-fixed-location)).
   Packets you sent are ringed in blue.
-- **Station trails**: a line through each moving station's earlier positions.
+- **Station trails**: a line through a moving station's earlier positions,
+  for the station you've selected or for every station (see Display Options).
 - The ◎ button re-centres the map on your position. The map centres on you
   automatically when your position first appears.
 - Stations disappear after `station_expire_minutes` with no packets. Killed
@@ -65,7 +66,11 @@ another tab. Messages expire after `station_expire_minutes`, like stations.
 
 ### Display Options tab
 
-- **Station Trails** on/off switch.
+- **Station Trails** on/off switch, with a sub-switch:
+  - **Only Selected Station**, on by default: draw only the trail of the
+    station whose detail popup is open (click its marker, or a packet in
+    the Raw or Messages list). Closing the popup hides the trail again.
+    Turn it off to see every station's trail at once.
 - **Imperial Units** switch, on by default: speeds in mph and altitudes in
   feet; off shows km/h and metres. This only changes the display: emaprs
   stores and sends metric (aprslib converts APRS's knots and feet as it
