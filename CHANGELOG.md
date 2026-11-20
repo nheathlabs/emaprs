@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-19
+
 ### Added
 
 - Display Options: **Only Selected Station** switch under Station Trails.
