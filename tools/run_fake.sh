@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Nicholas Heath
 # TEST ONLY: start fake gpsd + fake KISS TNC, then emaprs in the foreground.
@@ -16,7 +16,7 @@
 # Fake server output goes to .run/fake_gpsd.log and .run/fake_kiss.log.
 # The packet database is .run/emaprs/emaprs.sqlite3 (delete it to start empty).
 
-set -euo pipefail
+set -eu
 
 cd "$(dirname "$0")/.."
 
@@ -29,7 +29,7 @@ PY=.venv/bin/python
 
 # Create the venv and install emaprs (+ test tools) on first run, or if a
 # previous install didn't finish.
-if [[ ! -x "$PY" ]]; then
+if [ ! -x "$PY" ]; then
     echo "creating virtual environment in .venv ..."
     if ! python3 -m venv .venv; then
         echo "failed to create .venv (on Debian/Ubuntu: sudo apt install python3-venv)" >&2
@@ -43,7 +43,7 @@ if ! "$PY" -c "import emaprs, aiohttp, aprslib" 2>/dev/null; then
         exit 1
     fi
 fi
-if [[ ! -f "$CONFIG" ]]; then
+if [ ! -f "$CONFIG" ]; then
     echo "config not found: $CONFIG" >&2
     exit 1
 fi
@@ -64,13 +64,13 @@ else
     printf '\n[http]\nbind = ["127.0.0.1"]\n' >>.run/config.toml
 fi
 export XDG_DATA_HOME="$PWD/.run"
-pids=()
+pids=""
 
 cleanup() {
     trap - EXIT INT TERM
     echo
     echo "stopping fake servers..."
-    for pid in "${pids[@]}"; do
+    for pid in $pids; do
         kill "$pid" 2>/dev/null || true
     done
     wait 2>/dev/null || true
@@ -80,10 +80,10 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 "$PY" tools/fake_gpsd.py --lat "$LAT" --lon "$LON" --walk >.run/fake_gpsd.log 2>&1 &
-pids+=($!)
+pids="$pids $!"
 "$PY" tools/fake_kiss.py --center "$LAT,$LON" --mycall "$MYCALL" --interval "$INTERVAL" \
     >.run/fake_kiss.log 2>&1 &
-pids+=($!)
+pids="$pids $!"
 
 echo "fake gpsd + fake KISS running (logs in .run/); starting emaprs with $CONFIG"
 echo "(packet database: .run/emaprs/emaprs.sqlite3)"
@@ -92,5 +92,5 @@ echo "Ctrl-C stops everything."
 # Run emaprs in the background too, so this script's INT trap fires right away.
 "$PY" -m emaprs --config .run/config.toml &
 app=$!
-pids+=($app)
+pids="$pids $app"
 wait "$app"
